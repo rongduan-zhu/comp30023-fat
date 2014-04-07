@@ -87,4 +87,11 @@ The directory must already be empty of files
 */
 int fat_rmdir(char *path);
 
+/** Finds the first empty position (name = 0x00 or name = deleted)
+@param directory_sector Pointer to first sector of directory, maybe modified if
+	file is in a later linked cluster
+@return File entry number in directory or negative value for error
+*/
+int first_empty_location(int *directory_sector);
+
 #endif //FAT_H

@@ -264,7 +264,7 @@ int fat_open(char *name, char mode)
 		return -1;
 	}
 	/* allow mode to be 'w' or 'a' as well */
-	if(mode != 'r')
+	if(mode != 'r' && mode != 'w' && mode != 'a')
 	{
 		debug_printf("invalid mode\n");
 		return -1;
@@ -310,6 +310,31 @@ int fat_open(char *name, char mode)
 	if(file_entry_number < 0 && (mode =='w' || mode == 'a'))
 	{
 		/* need to create new file */
+		//Sets up file name and extension
+		unsigned char fname[FAT_FILE_LEN + 1];
+		unsigned char fext[FAT_EXT_LEN + 1];
+		fname[FAT_FILE_LEN] = '\0';
+		fext[FAT_EXT_LEN] = '\0';
+		name_to_83(bname, fname, fext);
+
+		//creates a new fat file
+		fat_file_t new_file_entry;
+		//finds the first empty location in the directory
+		file_entry_number = first_empty_location(&directory_sector);
+
+		//sets up the members of struct
+		new_file_entry.attr.dir = 0;
+		memcpy((void *) new_file_entry.name, (void *) fname, FAT_FILE_LEN);
+		memcpy((void *) new_file_entry.ext, (void *) fext, FAT_EXT_LEN);
+		new_file_entry.create_time_fine = fine_time_now();
+		new_file_entry.create_time = time_now();
+		new_file_entry.create_date = date_now();
+		new_file_entry.lm_time = new_file_entry.create_time;
+		new_file_entry.lm_date = new_file_entry.create_date;
+		new_file_entry.size = (uint32_t) 0;
+
+		//write it to disk
+		write_file_entry(new_file_entry, directory_sector, file_entry_number);
 	}
 	//read the file structure
 	fat_file_t f_entry;
@@ -318,6 +343,9 @@ int fat_open(char *name, char mode)
 	if(mode == 'w' && f_entry.size > 0)
 	{
 		/* existing file needs to be truncated in write mode */
+		//resets the file size to 0
+		f_entry.size = (uint16_t) 0;
+		write_file_entry(f_entry, directory_sector, file_entry_number);
 	}
 	//set up file handle
 	debug_printf("using file handle %d\n", handle);
@@ -593,5 +621,66 @@ int fat_rmdir(char *path)
 	/* check the directory doesn't contain any files */
 	/* work along FAT chain, mark each cluster as free */
 	/* mark file entry as deleted, write entry to disk */
+	return -1;
+}
+
+int first_empty_location(int *directory_sector) {
+	int dlocation = *directory_sector;
+	bool root_dir = true;
+	if(dlocation >= start_of_data())
+	{
+		root_dir = false;
+	}
+	debug_printf("looking for first empty file\n");
+	while(true)
+	{
+		uint8_t dir_sector[bytes_sector()];
+		read_block(dlocation, &dir_sector);
+		fat_file_t dir_files[dir_entries_sector()];
+		memcpy(&dir_files, &dir_sector, (size_t)bytes_sector());
+		//search the memory block for first empty block
+		for(int i = 0; i < dir_entries_sector(); ++i)
+		{
+			if(dir_files[i].name[0] == 0x00 || dir_files[i].name[0] == deleted_file)
+			{
+				//got a directory with the correct name
+				*directory_sector = dlocation;
+				return i;
+			}
+		}
+		//no empty location found, need to pick the next sector to search
+		//if there is actually a next sector
+		if(root_dir)
+		{
+			if(dlocation < start_of_root_dir() + root_dir_sectors())
+			{
+				//there are more root directory sectors to search
+				dlocation++;
+			}
+			else
+			{
+				//file doesn't exist
+				return -1;
+			}
+		}
+		else
+		{
+			if((dlocation + 1 - start_of_data()) % sectors_cluster() != 0)
+			{
+				//more sectors to search in this cluster
+				dlocation++;
+			}
+			else if(next_cluster_for_sector(dlocation) <= max_cluster)
+			{
+				//continues into another cluster
+				uint16_t next_c = next_cluster_for_sector(dlocation);
+				dlocation = data_cluster_to_sector(next_c);
+			}
+			else
+			{
+				return -1;
+			}
+		}
+	}
 	return -1;
 }
