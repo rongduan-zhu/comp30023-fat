@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <libgen.h>
 #include <ctype.h>
+#include <assert.h>
 #include "fat.h"
 #include "fatstruct.h"
 #include "fathelper.h"
@@ -397,6 +398,9 @@ int fat_close(int fd)
 		debug_printf("unlinking file on close\n");
 		/* find first cluster of file */
 		/* work along FAT chain, mark each cluster as free */
+		int unlink_chain_success;
+		unlink_chain_success = unlink_chain(f_entry.first_cluster);
+		assert(unlink_chain_success == 0);
 	}
 	return 0;
 }
@@ -686,4 +690,20 @@ int first_empty_location(int *directory_sector) {
 		}
 	}
 	return -1;
+}
+
+uint16_t unlink_entry(uint16_t current) {
+	uint16_t next = next_cluster(current);
+	int fat_write_success;
+	fat_write_success = write_fat_entry(current, free_cluster);
+	assert(fat_write_success == 0);
+	return next;
+}
+
+int unlink_chain(uint16_t start) {
+	uint16_t next = start;
+	for (int i = 0; i < chain_length(start); ++i) {
+		next = unlink_entry(next);
+	}
+	return 0;
 }

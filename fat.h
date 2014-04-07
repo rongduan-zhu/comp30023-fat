@@ -1,6 +1,8 @@
 #ifndef FAT_H
 #define FAT_H
 
+#include <stdint.h>
+
 #define fat_SEEK_SET 101
 #define fat_SEEK_CUR 102
 #define fat_SEEK_END 103
@@ -93,5 +95,17 @@ int fat_rmdir(char *path);
 @return File entry number in directory or negative value for error
 */
 int first_empty_location(int *directory_sector);
+
+/** Unlink a single fat entry
+@param current, current entry of fat to be unlinked
+@return next cluster in the chain for a given cluster
+*/
+uint16_t unlink_entry(uint16_t current);
+
+/** Unlink a fat chain
+@param start, start entry of fat to be unlinked
+@return 0 for success, otherwise error
+*/
+int unlink_chain(uint16_t start);
 
 #endif //FAT_H
