@@ -354,6 +354,9 @@ int fat_open(char *name, char mode)
 	if(mode == 'a')
 	{
 		/*initialise file pointer to end of file*/
+		//Although uint32_t should be same as unsigned int but
+		//still type cast to be safe.
+		file_handles[handle].fp = (unsigned int) f_entry.size;
 	}
 	else
 	{
