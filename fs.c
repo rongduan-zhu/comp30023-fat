@@ -20,8 +20,9 @@ int main(int argc, char **argv)
 	fat_mount("new.img");
 	for (int i = 0; i < 512; ++i) {
 		char name[50];
-		sprintf(name, "new%d", i);
-		fat_mkdir(name);
+		sprintf(name, "new%d/small.txt", i);
+		int file = fat_open(name, 'w');
+		fat_close(file);
 	}
 	// unsigned char buf[512];
 	// int file = fat_open("SUBDIR/SMALL.TXT", 'r');
