@@ -92,7 +92,7 @@ int fat_rmdir(char *path);
 /** Finds the first empty position (name = 0x00 or name = deleted)
 @param directory_sector Pointer to first sector of directory, maybe modified if
 	file is in a later linked cluster
-@return File entry number in directory or negative value for error
+@return File entry number in directory or -1 if cluster is full
 */
 int first_empty_location(int *directory_sector);
 
@@ -112,5 +112,23 @@ int unlink_chain(uint16_t start);
 @return position of fat entry, -1 if fat table is full
 */
 int first_free_fat_entry(void);
+
+/** Fills a cluster with all 0s
+@param cluster_entry, the cluster to write 0s to
+*/
+void empty_cluster(uint16_t cluster_entry);
+
+/** makes a new file descriptor
+@param name, pointer to name
+@param exit, pointer to extension
+@param directory, 0 if its not directory, 1 otherwise
+@param first_cluster, position of first cluster of data
+@param size, size of file
+*/
+fat_file_t make_file_descriptor(unsigned char *name,
+								unsigned char *ext,
+								int directory,
+								uint16_t first_cluster,
+								uint32_t size);
 
 #endif //FAT_H
