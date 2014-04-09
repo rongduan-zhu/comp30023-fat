@@ -620,6 +620,9 @@ int fat_write(int fd, void *buf, unsigned int count)
 		/* if cluster is full, find next cluster */
 		/* allocate a new cluster if necessary */
 	/*}*/
+
+	//
+
 	//finds first free location
 	int free_entry, fat_write_success;
 	free_entry = first_free_fat_entry();
@@ -678,10 +681,10 @@ int fat_mkdir(char *path)
 	//Doing this early because directory_sector might be modified
 	//by file_lookup
 	uint16_t parent_cluster;
-	if (*directory_sector < start_of_data()) {
+	if (directory_sector < start_of_data()) {
 		parent_cluster = 0;
 	} else {
-		parent_cluster = sector_to_data_cluster(*directory_sector);
+		parent_cluster = sector_to_data_cluster(directory_sector);
 	}
 
 	//checks if file already exists or not
@@ -738,25 +741,23 @@ int fat_mkdir(char *path)
 	//to 0s
 	empty_cluster(new_cluster_data);
 
-	/* TODO: write all zeros to new cluster, find parent cluster
-	   and write . and .. into new directory */
-
 	fat_file_t file_entry;
 	unsigned char fname[FAT_FILE_LEN + 1],
 				  fext[FAT_EXT_LEN + 1];
 	fname[FAT_FILE_LEN] = '\0';
 	fext[FAT_EXT_LEN] = '\0';
+	name_to_83(bname, fname, fext);
 
 	//sets up new file entry and write it to parent directory
 	file_entry = make_file_descriptor(fname, fext, 1, new_cluster_data, 0);
 	write_file_entry(file_entry, directory_sector, file_entry_number);
 	//sets up current directory entry and write it to data area of new
 	//file's data
-	file_entry = make_file_descriptor(".", "", 1, new_cluster_data, 0);
+	file_entry = make_file_descriptor(".       ", "   ", 1, new_cluster_data, 0);
 	write_file_entry(file_entry, data_cluster_to_sector(new_cluster_data), 0);
 	//sets up parent directory entry and write it to data area of new
 	//file's data
-	file_entry = make_file_descriptor("..", "", 1, parent_cluster, 0);
+	file_entry = make_file_descriptor("..      ", "   ", 1, parent_cluster, 0);
 	write_file_entry(file_entry, data_cluster_to_sector(new_cluster_data), 1);
 
 	return 0;
@@ -836,9 +837,9 @@ int first_empty_location(int *directory_sector) {
 }
 
 uint16_t unlink_entry(uint16_t current) {
-	uint16_t next = next_cluster(current);
+	int next = next_cluster(current);
 	int fat_write_success;
-	fat_write_success = write_fat_entry(current, free_cluster);
+	fat_write_success = write_fat_entry((uint16_t) current, free_cluster);
 	assert(fat_write_success == 0);
 	return next;
 }
@@ -872,7 +873,7 @@ int first_free_fat_entry() {
 	return -1;
 }
 
-void empty_cluster(uint16_t cluster_entry) {
+int empty_cluster(uint16_t cluster_entry) {
 	int bytes_cluster = bytes_sector() * sectors_cluster(),
 		bytes_written,
 		current_sector;
@@ -882,10 +883,11 @@ void empty_cluster(uint16_t cluster_entry) {
 		bytes_written = write_block(current_cluster, data);
 		if (bytes_written == -1) {
 			debug_printf("this should never happen [empty_cluster]\n");
-			return;
+			return -1;
 		}
 		debug_printf("a hell lot of 0s written. %d\n", bytes_written);
 	}
+	return 0;
 }
 
 fat_file_t make_file_descriptor(unsigned char *name,
@@ -904,5 +906,5 @@ fat_file_t make_file_descriptor(unsigned char *name,
 	new_file.lm_date = new_file.create_date;
 	new_file.first_cluster = first_cluster;
 	new_file.size = (uint32_t) size;
-	return fat_file_t;
+	return new_file;
 }

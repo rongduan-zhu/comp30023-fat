@@ -2,6 +2,7 @@
 #define FAT_H
 
 #include <stdint.h>
+#include "fatstruct.h"
 
 #define fat_SEEK_SET 101
 #define fat_SEEK_CUR 102
@@ -115,8 +116,9 @@ int first_free_fat_entry(void);
 
 /** Fills a cluster with all 0s
 @param cluster_entry, the cluster to write 0s to
+@return return 0 if successful, -1 otherwise
 */
-void empty_cluster(uint16_t cluster_entry);
+int empty_cluster(uint16_t cluster_entry);
 
 /** makes a new file descriptor
 @param name, pointer to name
