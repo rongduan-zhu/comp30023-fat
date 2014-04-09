@@ -311,17 +311,6 @@ int fat_open(char *name, char mode)
 	if(file_entry_number < 0 && (mode =='w' || mode == 'a'))
 	{
 		/* need to create new file */
-		//========================================
-		//finds first free location
-		int free_entry, fat_write_success;
-		free_entry = first_free_fat_entry();
-		if (free_entry == -1) {
-			return -1;
-		}
-		debug_printf("free entry found at %d\n", free_entry);
-		fat_write_success = write_fat_entry((uint16_t) free_entry, last_cluster);
-		assert(fat_write_success == 0);
-		//========================================
 		//Sets up file name and extension
 		unsigned char fname[FAT_FILE_LEN + 1];
 		unsigned char fext[FAT_EXT_LEN + 1];
@@ -334,8 +323,14 @@ int fat_open(char *name, char mode)
 		//finds the first empty location in the directory
 		file_entry_number = first_empty_location(&directory_sector);
 
-		//if run out of space, allocate new cluster
+
 		int new_cluster;
+		//if no new space, but in root directory, exit
+		if (directory_sector < start_of_data && file_entry_number < 0) {
+			debug_printf("unable to create new file, root directory is full\n");
+			return -1;
+		}
+		//if run out of space, allocate new cluster
 		if (file_entry_number < 0) {
 			debug_printf("allocating new cluster for directory\n");
 			new_cluster = first_free_fat_entry();
@@ -625,6 +620,15 @@ int fat_write(int fd, void *buf, unsigned int count)
 		/* if cluster is full, find next cluster */
 		/* allocate a new cluster if necessary */
 	/*}*/
+	//finds first free location
+	int free_entry, fat_write_success;
+	free_entry = first_free_fat_entry();
+	if (free_entry == -1) {
+		return -1;
+	}
+	debug_printf("free entry found at %d\n", free_entry);
+	fat_write_success = write_fat_entry((uint16_t) free_entry, last_cluster);
+	assert(fat_write_success == 0);
 	return -1;
 }
 
