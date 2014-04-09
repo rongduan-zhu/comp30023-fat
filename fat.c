@@ -908,12 +908,25 @@ fat_file_t make_file_descriptor(unsigned char *name,
 								uint16_t first_cluster,
 								uint32_t size) {
 	fat_file_t new_file;
-	new_file.attr.dir = directory;
+
 	memcpy((void *) new_file.name, (void *) name, FAT_FILE_LEN);
 	memcpy((void *) new_file.ext, (void *) ext, FAT_EXT_LEN);
+
+	new_file.attr.read_only = (uint8_t)0;
+	new_file.attr.hidden = (uint8_t)0;
+	new_file.attr.system = (uint8_t)0;
+	new_file.attr.vol = (uint8_t)0;
+	new_file.attr.dir = directory;
+	new_file.attr.archive = (uint8_t)1;
+	new_file.attr.device = (uint8_t)0;
+	new_file.attr.unused = (uint8_t)0;
+
+	new_file.nt_flags = (uint8_t)0;
 	new_file.create_time_fine = fine_time_now();
 	new_file.create_time = time_now();
 	new_file.create_date = date_now();
+	new_file.reserved = (uint16_t)0;
+	new_file.fat32_cluster = (uint16_t)0;
 	new_file.lm_time = new_file.create_time;
 	new_file.lm_date = new_file.create_date;
 	new_file.first_cluster = first_cluster;
@@ -923,6 +936,6 @@ fat_file_t make_file_descriptor(unsigned char *name,
 
 void to_upper(unsigned char *str, int size) {
 	for (int i = 0; i < size; ++i) {
-		str[i] = toupper(str[i]);
+		str[i] = toupper((int) str[i]);
 	}
 }
