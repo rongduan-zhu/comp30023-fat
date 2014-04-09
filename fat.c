@@ -48,7 +48,7 @@ int fat_mkfs(char* name, unsigned int size)
 	memcpy(&bs_struct.oem, oem_label, sizeof(bs_struct.oem));
 	bs_struct.bpb.bytes_sector = DISK_BLOCK_SIZE;
 	//2MiB - 2GiB
-	if(disk_size_bytes < MINIMUM_DISK_SIZE &&
+	if(disk_size_bytes < MINIMUM_DISK_SIZE ||
 		disk_size_bytes > MAXIMUM_DISK_SIZE)
 	{
 		debug_printf("invalid disk size");
@@ -409,7 +409,7 @@ int fat_close(int fd)
 		debug_printf("disk not mounted\n");
 		return -1;
 	}
-	if(fd < 0 && fd >= NUM_HANDLES)
+	if(fd < 0 || fd >= NUM_HANDLES)
 	{
 		debug_printf("invalid file descriptor");
 		return -1;

@@ -391,11 +391,11 @@ int dir_lookup(char* path)
 	{
 		return start_of_root_dir();
 	}
-	bool found = false;
 	//traverse the directory structure
 	while(dname_part != NULL)
 	{
 		debug_printf("looking for directory %s\n", dname_part);
+		bool found = false;
 		while(!found)
 		{
 			//read sector into a memory block
@@ -444,7 +444,7 @@ int dir_lookup(char* path)
 			//(if available)
 			if(dlocation < start_of_data())
 			{
-				if(dlocation < start_of_root_dir() + root_dir_sectors())
+				if(dlocation + 1 < start_of_data())
 				{
 					//there are more root directory sectors to search
 					dlocation++;
@@ -531,7 +531,7 @@ int file_lookup(char* name, int *directory_sector)
 		//if there is actually a next sector
 		if(root_dir)
 		{
-			if(dlocation < start_of_root_dir() + root_dir_sectors())
+			if(dlocation + 1 < start_of_data())
 			{
 				//there are more root directory sectors to search
 				dlocation++;
