@@ -345,6 +345,8 @@ int fat_open(char *name, char mode)
 
 		//sets up the members of struct
 		new_file_entry.attr.dir = 0;
+		to_upper(fname, FAT_FILE_LEN);
+		to_upper(fext, FAT_EXT_LEN);
 		memcpy((void *) new_file_entry.name, (void *) fname, FAT_FILE_LEN);
 		memcpy((void *) new_file_entry.ext, (void *) fext, FAT_EXT_LEN);
 		new_file_entry.create_time_fine = fine_time_now();
@@ -897,6 +899,8 @@ fat_file_t make_file_descriptor(unsigned char *name,
 								uint32_t size) {
 	fat_file_t new_file;
 	new_file.attr.dir = directory;
+	to_upper(name, FAT_FILE_LEN);
+	to_upper(ext, FAT_EXT_LEN);
 	memcpy((void *) new_file.name, (void *) name, FAT_FILE_LEN);
 	memcpy((void *) new_file.ext, (void *) ext, FAT_EXT_LEN);
 	new_file.create_time_fine = fine_time_now();
@@ -907,4 +911,10 @@ fat_file_t make_file_descriptor(unsigned char *name,
 	new_file.first_cluster = first_cluster;
 	new_file.size = (uint32_t) size;
 	return new_file;
+}
+
+void to_upper(char *str, int size) {
+	for (int i = 0; i < size; ++i) {
+		str[i] = toupper(str[i]);
+	}
 }
