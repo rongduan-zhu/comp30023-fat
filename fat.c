@@ -299,24 +299,26 @@ int fat_open(char *name, char mode)
 	int directory_sector = dir_lookup(dname);
 	if(directory_sector < 0)
 	{
-		debug_printf("directory does not exist");
+		debug_printf("directory does not exist\n");
 		return -1;
 	}
 	int file_entry_number = file_lookup(bname, &directory_sector);
 	if(file_entry_number < 0 && mode == 'r')
 	{
 		//file needs to exist for read mode
+		debug_printf("file does not exist\n");
 		return -1;
 	}
 	if(file_entry_number < 0 && (mode =='w' || mode == 'a'))
 	{
 		/* need to create new file */
 		//Sets up file name and extension
+		debug_printf("file does not exist. Creating new file\n");
 		unsigned char fname[FAT_FILE_LEN + 1];
 		unsigned char fext[FAT_EXT_LEN + 1];
 		fname[FAT_FILE_LEN] = '\0';
 		fext[FAT_EXT_LEN] = '\0';
-		to_upper(bname, strlen(bname));
+		to_upper((unsigned char *) bname, strlen(bname));
 		name_to_83(bname, fname, fext);
 
 		//creates a new fat file
@@ -346,8 +348,6 @@ int fat_open(char *name, char mode)
 
 		//sets up the members of struct
 		new_file_entry.attr.dir = 0;
-		to_upper(fname, FAT_FILE_LEN);
-		to_upper(fext, FAT_EXT_LEN);
 		memcpy((void *) new_file_entry.name, (void *) fname, FAT_FILE_LEN);
 		memcpy((void *) new_file_entry.ext, (void *) fext, FAT_EXT_LEN);
 		new_file_entry.create_time_fine = fine_time_now();
@@ -360,6 +360,7 @@ int fat_open(char *name, char mode)
 
 		//write it to disk
 		write_file_entry(new_file_entry, directory_sector, file_entry_number);
+		debug_printf("successfully wrote to disk\n");
 	}
 	//read the file structure
 	fat_file_t f_entry;
@@ -412,7 +413,7 @@ int fat_close(int fd)
 	}
 	if(fd < 0 || fd >= NUM_HANDLES)
 	{
-		debug_printf("invalid file descriptor");
+		debug_printf("invalid file descriptor\n");
 		return -1;
 	}
 	if(!file_handles[fd].open)
@@ -675,7 +676,7 @@ int fat_mkdir(char *path)
 	int directory_sector = dir_lookup(dname);
 	if(directory_sector < 0)
 	{
-		debug_printf("directory does not exist");
+		debug_printf("directory does not exist\n");
 		return -1;
 	}
 
@@ -750,7 +751,7 @@ int fat_mkdir(char *path)
 				  fext[FAT_EXT_LEN + 1];
 	fname[FAT_FILE_LEN] = '\0';
 	fext[FAT_EXT_LEN] = '\0';
-	to_upper(bname);
+	to_upper((unsigned char *) bname, strlen(bname));
 	name_to_83(bname, fname, fext);
 	debug_printf("Writing file descriptors for new file in parent directory\n");
 	//sets up new file entry and write it to parent directory

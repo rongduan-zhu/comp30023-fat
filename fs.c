@@ -18,12 +18,32 @@ int main(int argc, char **argv)
 		debug_printing = false;
 	}
 	fat_mount("new.img");
-	for (int i = 0; i < 512; ++i) {
-		char name[50];
-		sprintf(name, "new%d/small.txt", i);
-		int file = fat_open(name, 'w');
-		fat_close(file);
-	}
+	// for (int i = 0; i < 100; ++i) {
+	// 	char name[50];
+	// 	sprintf(name, "new%d", i);
+	// 	fat_mkdir(name);
+	// 	sprintf(name, "new%d/small.txt", i);
+	// 	int file = fat_open(name, 'w');
+	// 	fat_close(file);
+	// }
+	fat_mkdir("1");
+ fat_mkdir("1/2");
+ // fat_mkdir("1/2/3");
+ // fat_mkdir("1/2/3/4");
+ // fat_mkdir("1/2/3/4/5");
+ // fat_mkdir("1/2/3/4/5/6");
+ int file = fat_open("1/TEST.TXT", 'w');
+ fat_close(file);
+ file = fat_open("1/2/TEST.TXT", 'w');
+ fat_close(file);
+ // file = fat_open("1/2/3/TEST.TXT", 'w');
+ // fat_close(file);
+ // file = fat_open("1/2/3/4/TEST.TXT", 'w');
+ // fat_close(file);
+ // file = fat_open("1/2/3/4/5/TEST.TXT", 'w');
+ // fat_close(file);
+ // file = fat_open("1/2/3/4/5/6/TEST.TXT", 'w');
+ // fat_close(file);
 	// unsigned char buf[512];
 	// int file = fat_open("SUBDIR/SMALL.TXT", 'r');
 	// int rval = fat_read(file, &buf, 500);
