@@ -662,10 +662,10 @@ int fat_mkdir(char *path)
 	/* create the . and .. entries in the new directory */
 	/* write directory cluster to disk */
 	char namecopy1[MAX_PATH_LEN + 1];
-	strncpy(namecopy1, name, MAX_PATH_LEN);
+	strncpy(namecopy1, path, MAX_PATH_LEN);
 	namecopy1[MAX_PATH_LEN] = '\0';
 	char namecopy2[MAX_PATH_LEN + 1];
-	strncpy(namecopy2, name, MAX_PATH_LEN);
+	strncpy(namecopy2, path, MAX_PATH_LEN);
 	namecopy2[MAX_PATH_LEN] = '\0';
 	char* dname = dirname(namecopy1);
 	char* bname = basename(namecopy2);
@@ -682,7 +682,7 @@ int fat_mkdir(char *path)
 	//to zero, otherwise set it to the parents cluster number
 	//Doing this early because directory_sector might be modified
 	//by file_lookup
-	uint16_t parent_cluster;
+	int parent_cluster;
 	if (directory_sector < start_of_data()) {
 		parent_cluster = 0;
 	} else {
@@ -698,10 +698,10 @@ int fat_mkdir(char *path)
 	}
 
 	//finds first free cluster
-	uint16_t new_cluster_data;
+	int new_cluster_data;
 	new_cluster_data = first_free_fat_entry();
 	if (new_cluster_data < 0) {
-		debug_printf("Cannot create new directory\n
+		debug_printf("Cannot create new directory\n \
 			Disk/FAT is full.");
 		return -1;
 	}
@@ -719,6 +719,7 @@ int fat_mkdir(char *path)
 		debug_printf("Cannot create directory, root directory is full\n");
 		return -1;
 	}
+	debug_printf("Cluster for parent folder is full. Allocating new cluster\n");
 	//if all clusters are full, allocate new cluster
 	if (file_entry_number < 0) {
 		debug_printf("allocating new cluster for parent directory\n");
@@ -749,17 +750,21 @@ int fat_mkdir(char *path)
 	fname[FAT_FILE_LEN] = '\0';
 	fext[FAT_EXT_LEN] = '\0';
 	name_to_83(bname, fname, fext);
-
+	debug_printf("Writing file descriptors for new file in parent directory\n");
 	//sets up new file entry and write it to parent directory
 	file_entry = make_file_descriptor(fname, fext, 1, new_cluster_data, 0);
 	write_file_entry(file_entry, directory_sector, file_entry_number);
 	//sets up current directory entry and write it to data area of new
 	//file's data
-	file_entry = make_file_descriptor(".       ", "   ", 1, new_cluster_data, 0);
+	debug_printf("Writing file descriptor for self\n");
+	name_to_83(".", fname, fext);
+	file_entry = make_file_descriptor(fname, fext, 1, new_cluster_data, 0);
 	write_file_entry(file_entry, data_cluster_to_sector(new_cluster_data), 0);
 	//sets up parent directory entry and write it to data area of new
 	//file's data
-	file_entry = make_file_descriptor("..      ", "   ", 1, parent_cluster, 0);
+	debug_printf("Writing file descriptor for parent\n");
+	name_to_83("..", fname, fext);
+	file_entry = make_file_descriptor(fname, fext, 1, (uint16_t) parent_cluster, 0);
 	write_file_entry(file_entry, data_cluster_to_sector(new_cluster_data), 1);
 
 	return 0;
@@ -880,15 +885,17 @@ int empty_cluster(uint16_t cluster_entry) {
 		bytes_written,
 		current_sector;
 	current_sector = data_cluster_to_sector(cluster_entry);
-	char data[bytes_cluster] = {0};
+	char *data = (char *) malloc_wrapper(bytes_cluster);
+	memset(data, 0, bytes_cluster);
 	for (int i = sectors_cluster(); i > 0; --i) {
-		bytes_written = write_block(current_cluster, data);
+		bytes_written = write_block(current_sector, (void *) data);
 		if (bytes_written == -1) {
 			debug_printf("this should never happen [empty_cluster]\n");
 			return -1;
 		}
 		debug_printf("a hell lot of 0s written. %d\n", bytes_written);
 	}
+	free_wrapper((void *) data);
 	return 0;
 }
 
@@ -913,7 +920,7 @@ fat_file_t make_file_descriptor(unsigned char *name,
 	return new_file;
 }
 
-void to_upper(char *str, int size) {
+void to_upper(unsigned char *str, int size) {
 	for (int i = 0; i < size; ++i) {
 		str[i] = toupper(str[i]);
 	}

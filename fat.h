@@ -136,6 +136,6 @@ fat_file_t make_file_descriptor(unsigned char *name,
 @param str, pointer to the char str
 @param size, size of the char array
 */
-void to_upper(char *str, int size)
+void to_upper(unsigned char *str, int size);
 
 #endif //FAT_H
