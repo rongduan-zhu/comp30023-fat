@@ -311,6 +311,17 @@ int fat_open(char *name, char mode)
 	if(file_entry_number < 0 && (mode =='w' || mode == 'a'))
 	{
 		/* need to create new file */
+		//========================================
+		//finds first free location
+		int free_entry, fat_write_success;
+		free_entry = first_free_fat_entry();
+		if (free_entry == -1) {
+			return -1;
+		}
+		debug_printf("free entry found at %d\n", free_entry);
+		fat_write_success = write_fat_entry((uint16_t) free_entry, last_cluster);
+		assert(fat_write_success == 0);
+		//========================================
 		//Sets up file name and extension
 		unsigned char fname[FAT_FILE_LEN + 1];
 		unsigned char fext[FAT_EXT_LEN + 1];
@@ -323,6 +334,20 @@ int fat_open(char *name, char mode)
 		//finds the first empty location in the directory
 		file_entry_number = first_empty_location(&directory_sector);
 
+		//if run out of space, allocate new cluster
+		int new_cluster;
+		if (file_entry_number < 0) {
+			debug_printf("allocating new cluster for directory\n");
+			new_cluster = first_free_fat_entry();
+			if (new_cluster == -1) {
+				return -1;
+			}
+			write_fat_entry((uint16_t) new_cluster, last_cluster);
+			write_fat_entry((uint16_t) sector_to_data_cluster(directory_sector),
+				(uint16_t) new_cluster);
+			file_entry_number = 0;
+		}
+
 		//sets up the members of struct
 		new_file_entry.attr.dir = 0;
 		memcpy((void *) new_file_entry.name, (void *) fname, FAT_FILE_LEN);
@@ -332,6 +357,7 @@ int fat_open(char *name, char mode)
 		new_file_entry.create_date = date_now();
 		new_file_entry.lm_time = new_file_entry.create_time;
 		new_file_entry.lm_date = new_file_entry.create_date;
+		new_file_entry.first_cluster = 0;
 		new_file_entry.size = (uint32_t) 0;
 
 		//write it to disk
@@ -344,9 +370,19 @@ int fat_open(char *name, char mode)
 	if(mode == 'w' && f_entry.size > 0)
 	{
 		/* existing file needs to be truncated in write mode */
+		//unlink chain
+		int unlink_chain_success, fat_write_success;
+		unlink_chain_success = unlink_chain(f_entry.first_cluster);
+		assert(unlink_chain_success == 0);
+		//set first cluster value to eof/0xffff
+		fat_write_success = write_fat_entry(f_entry.first_cluster, last_cluster);
+		assert(fat_write_success == 0);
+
 		//resets the file size to 0
 		f_entry.size = (uint16_t) 0;
+		f_entry.first_cluster = 0;
 		write_file_entry(f_entry, directory_sector, file_entry_number);
+
 	}
 	//set up file handle
 	debug_printf("using file handle %d\n", handle);
@@ -706,4 +742,25 @@ int unlink_chain(uint16_t start) {
 		next = unlink_entry(next);
 	}
 	return 0;
+}
+
+int first_free_fat_entry() {
+	int current_fat = start_of_fat(),
+		fat_end = current_fat + sectors_fat() - 1, //inclusive
+		//number of fat entry per block
+		entry_block = bytes_sector() / (int) sizeof(uint16_t);
+	uint16_t fat_piece[entry_block];
+	while (current_fat <= fat_end) {
+		read_block(current_fat, &fat_piece); //read the whole fat block
+		for (int i = 0; i < entry_block; ++i) {
+			if (fat_piece[i] == free_cluster) {
+				//return fat entry location by calculating numbers of blocks
+				//traversed plus current offset
+				return (current_fat - start_of_fat()) * entry_block + i;
+			}
+		}
+		++current_fat;
+	}
+	//no free fat entry
+	return -1;
 }

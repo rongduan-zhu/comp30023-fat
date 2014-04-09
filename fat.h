@@ -108,4 +108,9 @@ uint16_t unlink_entry(uint16_t current);
 */
 int unlink_chain(uint16_t start);
 
+/** Finds the first entry in the fat table that is free and return its position
+@return position of fat entry, -1 if fat table is full
+*/
+int first_free_fat_entry(void);
+
 #endif //FAT_H
