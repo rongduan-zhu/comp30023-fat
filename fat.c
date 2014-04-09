@@ -326,7 +326,7 @@ int fat_open(char *name, char mode)
 
 		int new_cluster;
 		//if no new space, but in root directory, exit
-		if (directory_sector < start_of_data && file_entry_number < 0) {
+		if (directory_sector < start_of_data() && file_entry_number < 0) {
 			debug_printf("unable to create new file, root directory is full\n");
 			return -1;
 		}
