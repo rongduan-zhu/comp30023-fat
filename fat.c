@@ -714,7 +714,7 @@ int fat_mkdir(char *path)
 	file_entry_number = first_empty_location(&directory_sector);
 	//if new directory is in root directory, but root directory is full
 	//then don't do anything
-	if (directory_sector <= start_of_data()
+	if (directory_sector < start_of_data()
 		&& file_entry_number < 0)	{
 		debug_printf("Cannot create directory, root directory is full\n");
 		return -1;
@@ -810,7 +810,7 @@ int first_empty_location(int *directory_sector) {
 		//if there is actually a next sector
 		if(root_dir)
 		{
-			if(dlocation < start_of_root_dir() + root_dir_sectors())
+			if(dlocation + 1 < start_of_data())
 			{
 				//there are more root directory sectors to search
 				dlocation++;
