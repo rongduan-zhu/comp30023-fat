@@ -18,7 +18,11 @@ int main(int argc, char **argv)
 		debug_printing = false;
 	}
 	fat_mount("new.img");
-	fat_mkdir("NEW");
+	for (int i = 0; i < 512; ++i) {
+		char name[50];
+		sprintf(name, "new%d", i);
+		fat_mkdir(name);
+	}
 	// unsigned char buf[512];
 	// int file = fat_open("SUBDIR/SMALL.TXT", 'r');
 	// int rval = fat_read(file, &buf, 500);
