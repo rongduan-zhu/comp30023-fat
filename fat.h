@@ -112,7 +112,7 @@ int unlink_chain(uint16_t start);
 /** Finds the first entry in the fat table that is free and return its position
 @return position of fat entry, -1 if fat table is full
 */
-int first_free_fat_entry(void);
+uint16_t first_free_fat_entry(void);
 
 /** Fills a cluster with all 0s
 @param cluster_entry, the cluster to write 0s to

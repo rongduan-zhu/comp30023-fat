@@ -668,15 +668,16 @@ int fat_write(int fd, void *buf, unsigned int count)
 	if (f_entry.size == 0 && current_cluster == 0)
 	{
 		debug_printf("Empty file, allocating a cluster\n");
-		int free_entry, fat_write_success;
+		int fat_write_success;
 		//find first free entry in fat
-		free_entry = first_free_fat_entry();
-		if (free_entry == -1) {
+		current_cluster = first_free_fat_entry();
+		if (current_cluster == 0) {
 			return -1;
 		}
-		debug_printf("free entry found at %d\n", free_entry);
+		debug_printf("free entry found at %d\n", current_cluster);
+		f_entry.first_cluster = current_cluster;
 		//then mark the free fat entry.
-		fat_write_success = write_fat_entry((uint16_t) free_entry, last_cluster);
+		fat_write_success = write_fat_entry((uint16_t) current_cluster, last_cluster);
 		//it should not fail
 		assert(fat_write_success == 0);
 	}
@@ -735,7 +736,7 @@ int fat_write(int fd, void *buf, unsigned int count)
 		memcpy(temp_buf + offset_in_cluster,
 			(char*) buf + bytes_written,
 			(size_t) bytes_remaining);
-		debug_printf("successfully copied buffer into temporary buffer ready \
+		debug_printf("successfully copied buffer into temporary buffer ready\
 			to be written to disk\n");
 		//write temporary buffer onto disk image
 		int sector_number = data_cluster_to_sector(current_cluster),
@@ -1171,7 +1172,7 @@ int unlink_chain(uint16_t start) {
 	return 0;
 }
 
-int first_free_fat_entry() {
+uint16_t first_free_fat_entry() {
 	int current_fat = start_of_fat(),
 		fat_end = current_fat + sectors_fat() - 1, //inclusive
 		//number of fat entry per block
@@ -1189,7 +1190,7 @@ int first_free_fat_entry() {
 		++current_fat;
 	}
 	//no free fat entry
-	return -1;
+	return 0;
 }
 
 int empty_cluster(uint16_t cluster_entry) {

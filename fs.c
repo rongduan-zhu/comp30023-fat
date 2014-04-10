@@ -18,38 +18,35 @@ int main(int argc, char **argv)
 		debug_printing = false;
 	}
 	fat_mount("new.img");
-	// for (int i = 0; i < 100; ++i) {
-	// 	char name[50];
-	// 	sprintf(name, "new%d", i);
-	// 	fat_mkdir(name);
-	// 	sprintf(name, "new%d/small.txt", i);
-	// 	int file = fat_open(name, 'w');
-	// 	fat_close(file);
-	// }
-	fat_mkdir("1");
-	fat_mkdir("1/2");
- 	fat_mkdir("1/2/3");
- 	fat_mkdir("1/2/3/4");
- 	fat_mkdir("1/2/3/4/5");
- 	fat_mkdir("1/2/3/4/5/6");
- 	int file = fat_open("1/TEST.TXT", 'w');
- 	fat_close(file);
- 	file = fat_open("1/2/TEST.TXT", 'w');
- 	fat_close(file);
- 	file = fat_open("1/2/3/TEST.TXT", 'w');
- 	fat_close(file);
- 	file = fat_open("1/2/3/4/TEST.TXT", 'w');
- 	fat_close(file);
- 	file = fat_open("1/2/3/4/5/TEST.TXT", 'w');
- 	fat_close(file);
- 	file = fat_open("1/2/3/4/5/6/TEST.TXT", 'w');
- 	fat_close(file);
-	// unsigned char buf[512];
-	// int file = fat_open("SUBDIR/SMALL.TXT", 'r');
-	// int rval = fat_read(file, &buf, 500);
-	// printf("read %d bytes\n", rval);
-	// printf("%s", buf);
-	// fat_close(file);
+	/* mkdir and open w test */
+	// fat_mkdir("1");
+	// fat_mkdir("1/2");
+ // 	fat_mkdir("1/2/3");
+ // 	fat_mkdir("1/2/3/4");
+ // 	fat_mkdir("1/2/3/4/5");
+ // 	fat_mkdir("1/2/3/4/5/6");
+ // 	int file = fat_open("1/TEST.TXT", 'w');
+ // 	fat_close(file);
+ // 	file = fat_open("1/2/TEST.TXT", 'w');
+ // 	fat_close(file);
+ // 	file = fat_open("1/2/3/TEST.TXT", 'w');
+ // 	fat_close(file);
+ // 	file = fat_open("1/2/3/4/TEST.TXT", 'w');
+ // 	fat_close(file);
+ // 	file = fat_open("1/2/3/4/5/TEST.TXT", 'w');
+ // 	fat_close(file);
+ // 	file = fat_open("1/2/3/4/5/6/TEST.TXT", 'w');
+ // 	fat_close(file);
+
+	/* fat_write test */
+	int file2 = fat_open("TEST.TXT", 'w');
+	unsigned char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam malesuada varius arcu vel elementum. Vivamus sed commodo enim. Sed ultrices elementum eleifend. Quisque tempor lorem sed nisl pellentesque, et ultricies justo malesuada. Aliquam erat volutpat. Nullam ac tortor in justo rutrum scelerisque sit amet vel massa. Suspendisse potenti. Vestibulum nec pretium mi. Nam suscipit semper dolor non imperdiet. Nulla et orci nulla. Sed ac nibh sed lacus semper condimentum. Ut dignissim erat turpis, ut elementum lacus pulvinar ut. Donec porta eleifend luctus. Sed luctus ipsum eget enim congue, vel sollicitudin dui adipiscing. Phasellus sagittis elit eget magna venenatis porta. Cras pharetra eros ligula, at aliquam dui laoreet in. Vestibulum eu feugiat magna, et mollis tellus. ENDOFTEXT";
+	fat_write(file2, &text, sizeof(text));
+	fat_close(file2);
+	file2 = fat_open("TEST.TXT", 'a');
+	unsigned char text2[] = "This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. ENDOFTEXT";
+	fat_write(file2, &text2, sizeof(text2));
+	fat_close(file2);
 	fat_umount();
 	return EXIT_SUCCESS;
 }
