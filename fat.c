@@ -785,7 +785,7 @@ int fat_write(int fd, void *buf, unsigned int count)
 				write_fat_successful;
 			new_data_cluster = first_free_fat_entry();
 			if (new_data_cluster < 0) {
-				debug_printf("unable to allocate new cluster. Disk is full\n")
+				debug_printf("unable to allocate new cluster. Disk is full\n");
 				return -1;
 			}
 
@@ -1088,7 +1088,9 @@ int fat_rmdir(char *path)
 	unlink_chain(directory_entry.first_cluster);
 	directory_entry.name[0] = deleted_file;
 	int write_entry_success;
-	write_entry_success(directory_entry, parent_directory_sector, file_entry_number);
+	write_entry_success = write_file_entry(directory_entry,
+											parent_directory_sector,
+											file_entry_number);
 	return write_entry_success;
 }
 
@@ -1268,8 +1270,8 @@ int is_empty_directory(int directory_sector) {
 			//is not empty
 			if(dir_files[i].name[0] == 0x00 ||
 				dir_files[i].name[0] == deleted_file ||
-				dir_files[i].name[0] == '.' && dir_files[i].name[1] == '.' ||
-				dir_files[i].name[0] == '.' && dir_files[i].name[1] == ' ') {
+				(dir_files[i].name[0] == '.' && dir_files[i].name[1] == '.') ||
+				(dir_files[i].name[0] == '.' && dir_files[i].name[1] == ' ')) {
 				continue;
 			}
 			else

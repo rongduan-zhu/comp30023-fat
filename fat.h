@@ -144,6 +144,6 @@ void to_upper(unsigned char *str, int size);
 	   value. As this is only a checking process, not finding.
 @return 0 if successful, -1 otherwise
 */
-int is_empty_directory(int directory_sector)
+int is_empty_directory(int directory_sector);
 
 #endif //FAT_H
