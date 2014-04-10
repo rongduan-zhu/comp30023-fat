@@ -706,6 +706,10 @@ int fat_write(int fd, void *buf, unsigned int count)
 	//been written to disk
 	while (bytes_to_write > 0)
 	{
+		//Clears tempbuf into all 0s, otherwise there will be junk from last cluster
+		//if there are multiple clusters
+		memset(temp_buf, 0, bytes_cluster);
+
 		//check if there pointer is at start of cluster, if not read
 		//existing data in cluster into temporary buffer
 		if (offset_in_cluster > 0) {
@@ -876,7 +880,11 @@ int fat_unlink(char *path)
 	bool has_file_handle;
 	has_file_handle = false;
 	for (int i = 0; i < NUM_HANDLES; ++i) {
-		if(file_handles[i].file_sector == directory_sector) {
+		//check if the file is opened, directory sector is the same, and
+		//file offset is the same
+		if(file_handles[i].open == true &&
+			file_handles[i].file_sector == directory_sector &&
+			file_handles[i].file_offset == file_entry_number) {
 			file_handles[i].unlink = true;
 			has_file_handle = true;
 			break;
