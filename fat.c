@@ -736,7 +736,6 @@ int fat_write(int fd, void *buf, unsigned int count)
 		int bytes_remaining = imin(bytes_to_write, remaining_in_cluster);
 		//initialize buffer to 0s and then copy content from buffer into
 		//temporary buffer
-		memset(temp_buf, 0, bytes_cluster);
 		memcpy(temp_buf + offset_in_cluster,
 			(char*) buf + bytes_written,
 			(size_t) bytes_remaining);
