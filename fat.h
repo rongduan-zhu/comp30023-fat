@@ -138,4 +138,12 @@ fat_file_t make_file_descriptor(unsigned char *name,
 */
 void to_upper(unsigned char *str, int size);
 
+/** check if a directory is empty or not
+@param directory_sector, sector number of the directory to be checked,
+	   not a pointer because I do not wish to alter the calling function's
+	   value. As this is only a checking process, not finding.
+@return 0 if successful, -1 otherwise
+*/
+int is_empty_directory(int directory_sector)
+
 #endif //FAT_H
