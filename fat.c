@@ -794,20 +794,11 @@ int fat_write(int fd, void *buf, unsigned int count)
 			}
 
 			// make current cluster point to newly allocated cluster
-			write_fat_successful = write_fat_entry(current_cluster, (uint16_t) new_data_cluster);
-			if (write_fat_successful != 0) {
-				debug_printf("unable to link old fat to new fat. \
-					possible corrupted fat table\n");
-				return -1;
-			}
+			write_fat_entry(current_cluster, (uint16_t) new_data_cluster);
+			// make newly allocated cluster have value of EOF
+			write_fat_successful = write_fat_entry((uint16_t) new_data_cluster, last_cluster);
 			//assigns current cluster to the new cluster
 			current_cluster = (uint16_t) new_data_cluster;
-			// make newly allocated cluster have value of EOF
-			write_fat_successful = write_fat_entry(current_cluster, last_cluster);
-			if (write_fat_successful != 0) {
-				debug_printf("unable to make new fat point to EOF\n");
-				return -1;
-			}
 			offset_in_cluster = 0;
 		} else {
 			if(next_c <= max_cluster && next_c >= min_cluster)
