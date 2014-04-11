@@ -742,6 +742,11 @@ int fat_unlink(char *path) {
 		return -1;
 	}
 
+	if (!mounted) {
+		debug_printf("in unlink: disk not mounted\n");
+		return -1;
+	}
+
 	char namecopy1[MAX_PATH_LEN + 1];
 	strncpy(namecopy1, path, MAX_PATH_LEN);
 	namecopy1[MAX_PATH_LEN] = '\0';
@@ -813,6 +818,17 @@ int fat_mkdir(char *path) {
 	/* make a memory buffer for the directory cluster, fill with zeros */
 	/* create the . and .. entries in the new directory */
 	/* write directory cluster to disk */
+
+	if (path == NULL) {
+		debug_printf("in mkdir: invalid path\n");
+		return -1;
+	}
+
+	if (!mounted) {
+		debug_printf("in unlink: disk not mounted\n");
+		return -1;
+	}
+
 	char namecopy1[MAX_PATH_LEN + 1];
 	strncpy(namecopy1, path, MAX_PATH_LEN);
 	namecopy1[MAX_PATH_LEN] = '\0';
@@ -934,6 +950,12 @@ int fat_rmdir(char *path) {
 	/* check the directory doesn't contain any files */
 	/* work along FAT chain, mark each cluster as free */
 	/* mark file entry as deleted, write entry to disk */
+
+	if (!mounted) {
+		debug_printf("in rmdir: disk not mounted\n");
+		return -1;
+	}
+
 	char namecopy1[MAX_PATH_LEN + 1];
 	strncpy(namecopy1, path, MAX_PATH_LEN);
 	namecopy1[MAX_PATH_LEN] = '\0';
