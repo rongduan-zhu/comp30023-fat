@@ -253,8 +253,6 @@ int fat_open(char *name, char mode) {
 		debug_printf("in open: all file handles in use\n");
 		return -1;
 	}
-	//converts name to upper case
-	to_upper((unsigned char *) name, strlen(name));
 
 	//traverse directories, find the file
 	char namecopy1[MAX_PATH_LEN + 1];
@@ -286,6 +284,8 @@ int fat_open(char *name, char mode) {
 		unsigned char fext[FAT_EXT_LEN + 1];
 		fname[FAT_FILE_LEN] = '\0';
 		fext[FAT_EXT_LEN] = '\0';
+		to_upper((unsigned char *) bname, strlen(bname));
+		to_upper((unsigned char *) dname, strlen(dname));
 		name_to_83(bname, fname, fext);
 
 		//creates a new fat file
@@ -316,16 +316,6 @@ int fat_open(char *name, char mode) {
 
 		//sets up the members of struct
 		new_file_entry = make_file_descriptor(fname, fext, 0, 0, 0);
-		// new_file_entry.attr.dir = 0;
-		// memcpy((void *) new_file_entry.name, (void *) fname, FAT_FILE_LEN);
-		// memcpy((void *) new_file_entry.ext, (void *) fext, FAT_EXT_LEN);
-		// new_file_entry.create_time_fine = fine_time_now();
-		// new_file_entry.create_time = time_now();
-		// new_file_entry.create_date = date_now();
-		// new_file_entry.lm_time = new_file_entry.create_time;
-		// new_file_entry.lm_date = new_file_entry.create_date;
-		// new_file_entry.first_cluster = 0;
-		// new_file_entry.size = (uint32_t) 0;
 
 		//write it to disk
 		write_file_entry(new_file_entry, directory_sector, file_entry_number);
@@ -910,6 +900,7 @@ int fat_mkdir(char *path) {
 	fname[FAT_FILE_LEN] = '\0';
 	fext[FAT_EXT_LEN] = '\0';
 	to_upper((unsigned char *) bname, strlen(bname));
+	to_upper((unsigned char *) dname, strlen(dname));
 	name_to_83(bname, fname, fext);
 	debug_printf("in mkdir: writing file descriptors for new file in parent directory\n");
 	//sets up new file entry and write it to parent directory
