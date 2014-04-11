@@ -155,12 +155,10 @@ void print_directory_sector(int sector) {
 		if (dir_files[i].name[0] == 0x00) {
 			printf("file %d name starts with null byte", i);
 			continue;
-		}
-		else if (dir_files[i].name[0] == deleted_file) {
+		} else if (dir_files[i].name[0] == deleted_file) {
 			printf("file %d deleted\n", i);
 			continue;
-		}
-		else if (is_lfn(dir_files[i].attr)) {
+		} else if (is_lfn(dir_files[i].attr)) {
 			printf("file %d used for LFN\n", i);
 			continue;
 		}
@@ -235,12 +233,12 @@ int fat_umount() {
 
 int fat_open(char *name, char mode) {
 	if (!mounted) {
-		debug_printf("disk not mounted\n");
+		debug_printf("in open: disk not mounted\n");
 		return -1;
 	}
 	/* allow mode to be 'w' or 'a' as well */
 	if (mode != 'r' && mode != 'w' && mode != 'a') {
-		debug_printf("invalid mode\n");
+		debug_printf("in open: nvalid mode\n");
 		return -1;
 	}
 	//find an unused handle
@@ -252,9 +250,12 @@ int fat_open(char *name, char mode) {
 		}
 	}
 	if (handle == -1) {
-		debug_printf("all file handles in use\n");
+		debug_printf("in open: all file handles in use\n");
 		return -1;
 	}
+	//converts name to upper case
+	to_upper((unsigned char *) name, strlen(name));
+
 	//traverse directories, find the file
 	char namecopy1[MAX_PATH_LEN + 1];
 	strncpy(namecopy1, name, MAX_PATH_LEN);
@@ -264,28 +265,27 @@ int fat_open(char *name, char mode) {
 	namecopy2[MAX_PATH_LEN] = '\0';
 	char* dname = dirname(namecopy1);
 	char* bname = basename(namecopy2);
-	debug_printf("directory name: %s\n", dname);
-	debug_printf("file name: %s\n", bname);
+	debug_printf("in open: directory name: %s\n", dname);
+	debug_printf("in open: file name: %s\n", bname);
 	int directory_sector = dir_lookup(dname);
 	if (directory_sector < 0) {
-		debug_printf("directory does not exist\n");
+		debug_printf("in open: directory does not exist\n");
 		return -1;
 	}
 	int file_entry_number = file_lookup(bname, &directory_sector);
 	if (file_entry_number < 0 && mode == 'r') {
 		//file needs to exist for read mode
-		debug_printf("file does not exist\n");
+		debug_printf("in open: file does not exist\n");
 		return -1;
 	}
 	if (file_entry_number < 0 && (mode =='w' || mode == 'a')) {
 		/* need to create new file */
 		//Sets up file name and extension
-		debug_printf("file does not exist. Creating new file\n");
+		debug_printf("in open: file does not exist. Creating new file\n");
 		unsigned char fname[FAT_FILE_LEN + 1];
 		unsigned char fext[FAT_EXT_LEN + 1];
 		fname[FAT_FILE_LEN] = '\0';
 		fext[FAT_EXT_LEN] = '\0';
-		to_upper((unsigned char *) bname, strlen(bname));
 		name_to_83(bname, fname, fext);
 
 		//creates a new fat file
@@ -293,20 +293,21 @@ int fat_open(char *name, char mode) {
 		//finds the first empty location in the directory
 		file_entry_number = first_empty_location(&directory_sector);
 
-
 		int new_cluster;
 		//if no new space, but in root directory, exit
 		if (directory_sector < start_of_data() && file_entry_number < 0) {
-			debug_printf("unable to create new file, root directory is full\n");
+			debug_printf("in open: unable to create new file, root directory is full\n");
 			return -1;
 		}
 		//if run out of space, allocate new cluster
 		if (file_entry_number < 0) {
-			debug_printf("allocating new cluster for directory\n");
+			debug_printf("in open: allocating new cluster for directory\n");
 			new_cluster = first_free_fat_entry();
 			if (new_cluster == -1) {
+				debug_printf("in open: unable to create new file, disk is full\n");
 				return -1;
 			}
+			//write new cluster to disk, and current one to new one
 			write_fat_entry((uint16_t) new_cluster, last_cluster);
 			write_fat_entry((uint16_t) sector_to_data_cluster(directory_sector),
 				(uint16_t) new_cluster);
@@ -314,20 +315,21 @@ int fat_open(char *name, char mode) {
 		}
 
 		//sets up the members of struct
-		new_file_entry.attr.dir = 0;
-		memcpy((void *) new_file_entry.name, (void *) fname, FAT_FILE_LEN);
-		memcpy((void *) new_file_entry.ext, (void *) fext, FAT_EXT_LEN);
-		new_file_entry.create_time_fine = fine_time_now();
-		new_file_entry.create_time = time_now();
-		new_file_entry.create_date = date_now();
-		new_file_entry.lm_time = new_file_entry.create_time;
-		new_file_entry.lm_date = new_file_entry.create_date;
-		new_file_entry.first_cluster = 0;
-		new_file_entry.size = (uint32_t) 0;
+		new_file_entry = make_file_descriptor(fname, fext, 0, 0, 0);
+		// new_file_entry.attr.dir = 0;
+		// memcpy((void *) new_file_entry.name, (void *) fname, FAT_FILE_LEN);
+		// memcpy((void *) new_file_entry.ext, (void *) fext, FAT_EXT_LEN);
+		// new_file_entry.create_time_fine = fine_time_now();
+		// new_file_entry.create_time = time_now();
+		// new_file_entry.create_date = date_now();
+		// new_file_entry.lm_time = new_file_entry.create_time;
+		// new_file_entry.lm_date = new_file_entry.create_date;
+		// new_file_entry.first_cluster = 0;
+		// new_file_entry.size = (uint32_t) 0;
 
 		//write it to disk
 		write_file_entry(new_file_entry, directory_sector, file_entry_number);
-		debug_printf("successfully wrote to disk\n");
+		debug_printf("in open: successfully wrote to disk\n");
 	}
 	//read the file structure
 	fat_file_t f_entry;
@@ -350,7 +352,7 @@ int fat_open(char *name, char mode) {
 
 	}
 	//set up file handle
-	debug_printf("using file handle %d\n", handle);
+	debug_printf("in open: using file handle %d\n", handle);
 	file_handles[handle].file_sector = directory_sector;
 	file_handles[handle].file_offset = file_entry_number;
 	if (mode == 'a') {
@@ -358,8 +360,7 @@ int fat_open(char *name, char mode) {
 		//Although uint32_t should be same as unsigned int but
 		//still type cast to be safe.
 		file_handles[handle].fp = (unsigned int) f_entry.size;
-	}
-	else {
+	} else {
 		file_handles[handle].fp = 0;
 	}
 	file_handles[handle].mode = mode;
@@ -370,15 +371,15 @@ int fat_open(char *name, char mode) {
 
 int fat_close(int fd) {
 	if (!mounted) {
-		debug_printf("disk not mounted\n");
+		debug_printf("in close: disk not mounted\n");
 		return -1;
 	}
 	if (fd < 0 || fd >= NUM_HANDLES) {
-		debug_printf("invalid file descriptor\n");
+		debug_printf("in close: invalid file descriptor\n");
 		return -1;
 	}
 	if (!file_handles[fd].open) {
-		debug_printf("file not open\n");
+		debug_printf("in close: file not open\n");
 		return -1;
 	}
 	//usually flush() would get called here
@@ -389,31 +390,32 @@ int fat_close(int fd) {
 		file_handles[fd].file_offset);
 	file_handles[fd].open = false;
 	if (file_handles[fd].unlink == true) {
-		debug_printf("unlinking file on close\n");
+		debug_printf("in close: unlinking file on close\n");
 		/* find first cluster of file */
 		/* work along FAT chain, mark each cluster as free */
 		int unlink_chain_success;
 		unlink_chain_success = unlink_chain(f_entry.first_cluster);
 		assert(unlink_chain_success == 0);
+		debug_printf("in close: unlink successful\n");
 	}
 	return 0;
 }
 
 int fat_read(int fd, void *buf, unsigned int count) {
 	if (!mounted) {
-		debug_printf("not mounted\n");
+		debug_printf("in read: not mounted\n");
 		return -1;
 	}
 	if (fd < 0 || fd >= NUM_HANDLES) {
-		debug_printf("invalid file handle\n");
+		debug_printf("in read: invalid file handle\n");
 		return -1;
 	}
 	if (!file_handles[fd].open) {
-		debug_printf("file not open\n");
+		debug_printf("in read: file not open\n");
 		return -1;
 	}
 	if (file_handles[fd].mode != 'r') {
-		debug_printf("wrong file mode\n");
+		debug_printf("in read: wrong file mode\n");
 		return -1;
 	}
 	if (count == 0) {
@@ -432,11 +434,10 @@ int fat_read(int fd, void *buf, unsigned int count) {
 		int next_c = next_cluster(current_cluster);
 		if (next_c <= max_cluster && next_c >= min_cluster) {
 			current_cluster = (uint16_t)next_c;
-		}
-		else {
+		} else {
 			//file length says it should have more clusters
 			//but the FAT chain isn't long enough
-			exit_error("invalid cluster reference in FAT");
+			exit_error("in read: invalid cluster reference in FAT");
 		}
 	}
 	int offset_in_cluster = (int)file_handles[fd].fp % bytes_cluster;
@@ -468,9 +469,8 @@ int fat_read(int fd, void *buf, unsigned int count) {
 		if (next_c <= max_cluster && next_c >= min_cluster) {
 			current_cluster = (uint16_t)next_c;
 			offset_in_cluster = 0;
-		}
-		else {
-			exit_error("invalid cluster reference in FAT");
+		} else {
+			exit_error("in read: invalid cluster reference in FAT");
 		}
 	}
 	return bytes_read;
@@ -478,19 +478,19 @@ int fat_read(int fd, void *buf, unsigned int count) {
 
 int fat_lseek(int fd, unsigned int offset, int whence) {
 	if (!mounted) {
-		debug_printf("not mounted\n");
+		debug_printf("in lseek: not mounted\n");
 		return -1;
 	}
 	if (fd < 0 || fd >= NUM_HANDLES) {
-		debug_printf("invalid file handle\n");
+		debug_printf("in lseek: invalid file handle\n");
 		return -1;
 	}
 	if (!file_handles[fd].open) {
-		debug_printf("file not open\n");
+		debug_printf("in lseek: file not open\n");
 		return -1;
 	}
 	if (!(whence == fat_SEEK_SET || whence == fat_SEEK_CUR || whence == fat_SEEK_END)) {
-		debug_printf("invalid whence\n");
+		debug_printf("in lseek: invalid whence\n");
 		return -1;
 	}
 	fat_file_t f_entry;
@@ -500,16 +500,14 @@ int fat_lseek(int fd, unsigned int offset, int whence) {
 	int new_fp = 0;
 	if (whence == fat_SEEK_SET) {
 		new_fp = offset;
-	}
-	else if (whence == fat_SEEK_CUR) {
+	} else if (whence == fat_SEEK_CUR) {
 		new_fp = file_handles[fd].fp + offset;
-	}
-	else if (whence == fat_SEEK_END) {
+	} else if (whence == fat_SEEK_END) {
 		new_fp = file_size + offset;
 	}
 	if (new_fp > file_size) {
 		if (file_handles[fd].mode == 'r') {
-			debug_printf("tried to seek off end of file\n");
+			debug_printf("in lseek: tried to seek off end of file\n");
 			return -1;
 		}
 		//extend the file so that the file pointer is at the end of file
@@ -535,15 +533,15 @@ int fat_write(int fd, void *buf, unsigned int count) {
 	(void)buf;
 	(void)count;
 	if (fd < 0 || fd >= NUM_HANDLES) {
-		debug_printf("fat_write: invalid file handle\n");
+		debug_printf("in write: invalid file handle\n");
 		return -1;
 	}
 	if (buf == NULL) {
-		debug_printf("fat_write: null argument \n");
+		debug_printf("in write: no buffer provided\n");
 		return -1;
 	}
 	if (count == 0) {
-		debug_printf("fat_write: count is 0\n");
+		debug_printf("in write: count is 0\n");
 		return 0;
 	}
 	/* check input arguments for errors */
@@ -569,15 +567,15 @@ int fat_write(int fd, void *buf, unsigned int count) {
 	/*}*/
 
 	if (!mounted) {
-		debug_printf("fat_write: not mounted\n");
+		debug_printf("in write: not mounted\n");
 		return -1;
 	}
 	if (!file_handles[fd].open) {
-		debug_printf("fat_write: file not open\n");
+		debug_printf("in write: file not open\n");
 		return -1;
 	}
 	if (file_handles[fd].mode != 'w' && file_handles[fd].mode != 'a') {
-		debug_printf("fat_write: wrong file mode\n");
+		debug_printf("in write: wrong file mode\n");
 		return -1;
 	}
 
@@ -591,14 +589,14 @@ int fat_write(int fd, void *buf, unsigned int count) {
 	//If size and current cluster is set to 0, means it is an empty file
 	//Allocate a cluster for it
 	if (f_entry.size == 0 && current_cluster == 0) {
-		debug_printf("Empty file, allocating a cluster\n");
+		debug_printf("in write: empty file, allocating a cluster\n");
 		int fat_write_success;
 		//find first free entry in fat
 		current_cluster = first_free_fat_entry();
 		if (current_cluster == 0) {
 			return -1;
 		}
-		debug_printf("free entry found at %d\n", current_cluster);
+		debug_printf("in write: free cluster at %d\n", current_cluster);
 		f_entry.first_cluster = current_cluster;
 		//then mark the free fat entry.
 		fat_write_success = write_fat_entry((uint16_t) current_cluster, last_cluster);
@@ -614,7 +612,7 @@ int fat_write(int fd, void *buf, unsigned int count) {
 		} else {
 			//file length says it should have more clusters
 			//but the FAT chain isn't long enough
-			exit_error("invalid cluster reference in FAT");
+			exit_error("in write: invalid cluster reference in FAT\n");
 		}
 	}
 
@@ -623,8 +621,7 @@ int fat_write(int fd, void *buf, unsigned int count) {
 		bytes_written = 0,
 		bytes_to_write = (int) count;
 	char *temp_buf = (char *) malloc_wrapper(bytes_cluster);
-	debug_printf("starting the writing process\n");
-	debug_printf("%d bytes to go\n", (int) count);
+	debug_printf("in write: %d bytes left to write\n", (int) count);
 
 	//while there are data left to write, write them until all data has
 	//been written to disk
@@ -646,7 +643,7 @@ int fat_write(int fd, void *buf, unsigned int count) {
 				read_block_successful = read_block(first_sector + i,
 													&temp_buf[i * bytes_sector()]);
 				if (read_block_successful == -1) {
-					debug_printf("unable to read existing data into memory buffer\n");
+					debug_printf("in write: unable to read existing data into memory buffer\n");
 					return -1;
 				}
 			}
@@ -662,8 +659,7 @@ int fat_write(int fd, void *buf, unsigned int count) {
 		memcpy(temp_buf + offset_in_cluster,
 			(char*) buf + bytes_written,
 			(size_t) bytes_remaining);
-		debug_printf("successfully copied buffer into temporary buffer ready\
-			to be written to disk\n");
+		debug_printf("in write: successfully copied buffer into temporary buffer ready to be written to disk\n");
 		//write temporary buffer onto disk image
 		int sector_number = data_cluster_to_sector(current_cluster),
 			sectors_per_cluster = sectors_cluster(),
@@ -673,7 +669,7 @@ int fat_write(int fd, void *buf, unsigned int count) {
 			write_block_successful = write_block(sector_number + i,
 												&temp_buf[i * bytes_sector()]);
 			if (write_block_successful == -1) {
-				debug_printf("unable to write buffer to sector %d\n", sector_number + i);
+				debug_printf("in write: unable to write buffer to sector %d\n", sector_number + i);
 				return -1;
 			}
 		}
@@ -690,11 +686,12 @@ int fat_write(int fd, void *buf, unsigned int count) {
 												file_handles[fd].file_sector,
 												file_handles[fd].file_offset);
 		if (write_entry_success != 0) {
-			debug_printf("Oh no, failed to sync file descriptor with actual data.\
-				\nfailed to write file entry\n");
+			debug_printf("in write: failed to update file entry\n");
 			return -1;
 		}
 
+		//updates how many bytes to write, bytes written, bytes remaining in current cluster
+		//and file pointer's location
 		bytes_to_write -= bytes_remaining;
 		bytes_written += bytes_remaining;
 		remaining_in_cluster -= bytes_remaining;
@@ -714,7 +711,7 @@ int fat_write(int fd, void *buf, unsigned int count) {
 			int new_data_cluster;
 			new_data_cluster = first_free_fat_entry();
 			if (new_data_cluster < 0) {
-				debug_printf("unable to allocate new cluster. Disk is full\n");
+				debug_printf("in write: unable to allocate new cluster. Disk is full\n");
 				return -1;
 			}
 
@@ -730,7 +727,7 @@ int fat_write(int fd, void *buf, unsigned int count) {
 				current_cluster = (uint16_t)next_c;
 				offset_in_cluster = 0;
 			} else {
-				exit_error("invalid cluster reference in FAT");
+				exit_error("in write: invalid cluster reference in FAT");
 			}
 		}
 	}
@@ -751,7 +748,7 @@ int fat_unlink(char *path) {
 	/* mark file entry as deleted, write entry to disk */
 
 	if (path == NULL) {
-		debug_printf("fat_unlink: Invalid path.\n");
+		debug_printf("in unlink: Invalid path.\n");
 		return -1;
 	}
 
@@ -763,11 +760,11 @@ int fat_unlink(char *path) {
 	namecopy2[MAX_PATH_LEN] = '\0';
 	char* dname = dirname(namecopy1);
 	char* bname = basename(namecopy2);
-	debug_printf("parent directory name: %s\n", dname);
-	debug_printf("file name: %s\n", bname);
+	debug_printf("in unlink: parent directory name: %s\n", dname);
+	debug_printf("in unlink: file name: %s\n", bname);
 	int directory_sector = dir_lookup(dname);
 	if (directory_sector < 0) {
-		debug_printf("directory does not exist\n");
+		debug_printf("in unlink: directory does not exist\n");
 		return -1;
 	}
 
@@ -775,7 +772,7 @@ int fat_unlink(char *path) {
 	int file_entry_number;
 	file_entry_number = file_lookup(bname, &directory_sector);
 	if (file_entry_number < 0) {
-		debug_printf("fat_unlink: the file does not exist\n");
+		debug_printf("in unlink: the file does not exist\n");
 		// file does not exist
 		return -1;
 	}
@@ -801,7 +798,7 @@ int fat_unlink(char *path) {
 	fat_file_t f_entry;
 	read_file_entry(&f_entry, directory_sector, file_entry_number);
 	if (f_entry.attr.dir == 1) {
-		debug_printf("unable to unlink directory. Please use fat_rmdir\n");
+		debug_printf("unable to unlink directory.\n");
 		return -1;
 	}
 	//If the file is not opened, then unlink it. Otherwise delegate it to
@@ -834,11 +831,11 @@ int fat_mkdir(char *path) {
 	namecopy2[MAX_PATH_LEN] = '\0';
 	char* dname = dirname(namecopy1);
 	char* bname = basename(namecopy2);
-	debug_printf("parent directory name: %s\n", dname);
-	debug_printf("new directory name: %s\n", bname);
+	debug_printf("in mkdir: parent directory name: %s\n", dname);
+	debug_printf("in mkdir: new directory name: %s\n", bname);
 	int directory_sector = dir_lookup(dname);
 	if (directory_sector < 0) {
-		debug_printf("directory does not exist\n");
+		debug_printf("in mkdir: parent directory does not exist\n");
 		return -1;
 	}
 
@@ -857,7 +854,7 @@ int fat_mkdir(char *path) {
 	int file_entry_number;
 	file_entry_number = file_lookup(bname, &directory_sector);
 	if (file_entry_number >= 0) {
-		debug_printf("new directory already exists.\n");
+		debug_printf("in mkdir: directory already exists.\n");
 		return -1;
 	}
 
@@ -865,8 +862,7 @@ int fat_mkdir(char *path) {
 	int new_cluster_data;
 	new_cluster_data = first_free_fat_entry();
 	if (new_cluster_data < 0) {
-		debug_printf("Cannot create new directory\n \
-			Disk/FAT is full.");
+		debug_printf("in mkdir: cannot create new directory, disk is full.");
 		return -1;
 	}
 	//set the next cluster value to EOF
@@ -880,13 +876,13 @@ int fat_mkdir(char *path) {
 	//then don't do anything
 	if (directory_sector < start_of_data()
 		&& file_entry_number < 0)	{
-		debug_printf("Cannot create directory, root directory is full\n");
+		debug_printf("in mkdir: cannot create directory, root directory is full\n");
 		return -1;
 	}
-	debug_printf("Cluster for parent folder is full. Allocating new cluster\n");
+	debug_printf("in mkdir: cluster for parent folder is full. Allocating new cluster\n");
 	//if all clusters are full, allocate new cluster
 	if (file_entry_number < 0) {
-		debug_printf("allocating new cluster for parent directory\n");
+		debug_printf("in mkdir: allocating new cluster for parent directory\n");
 		new_cluster_parent = first_free_fat_entry();
 		//if no cluster is left, then undo the write fat entry for
 		//data
@@ -915,13 +911,13 @@ int fat_mkdir(char *path) {
 	fext[FAT_EXT_LEN] = '\0';
 	to_upper((unsigned char *) bname, strlen(bname));
 	name_to_83(bname, fname, fext);
-	debug_printf("Writing file descriptors for new file in parent directory\n");
+	debug_printf("in mkdir: writing file descriptors for new file in parent directory\n");
 	//sets up new file entry and write it to parent directory
 	file_entry = make_file_descriptor(fname, fext, 1, new_cluster_data, 0);
 	write_file_entry(file_entry, directory_sector, file_entry_number);
 	//sets up current directory entry and write it to data area of new
 	//file's data
-	debug_printf("Writing file descriptor for self\n");
+	debug_printf("in mkdir: writing file descriptor for self\n");
 	name_to_83(".", fname, fext);
 	file_entry = make_file_descriptor(fname, fext, 1, new_cluster_data, 0);
 	write_file_entry(file_entry, data_cluster_to_sector(new_cluster_data), 0);
@@ -938,7 +934,7 @@ int fat_mkdir(char *path) {
 int fat_rmdir(char *path) {
 	(void) path;
 	if (path == NULL) {
-		debug_printf("Yo dude, why you do dis to me?\n");
+		debug_printf("in rmdir: invalid path\n");
 		return -1;
 	}
 	/* check input arguments for errors */
@@ -964,7 +960,7 @@ int fat_rmdir(char *path) {
 
 	//make sure it isn't trying to remove root file
 	if (strcmp(bname, ".") == 0) {
-		debug_printf("Don't be silly bro.\n");
+		debug_printf("in rmdir: cannot remove root directory\n");
 		return -1;
 	}
 
@@ -972,7 +968,7 @@ int fat_rmdir(char *path) {
 	int file_entry_number;
 	file_entry_number = file_lookup(bname, &parent_directory_sector);
 	if (file_entry_number < 0) {
-		debug_printf("Cannot find the directory.\nMaybe try again later?");
+		debug_printf("in rmdir: cannot find the directory.\n");
 		return -1;
 	}
 
@@ -983,7 +979,7 @@ int fat_rmdir(char *path) {
 												parent_directory_sector,
 												file_entry_number);
 	if (read_file_entry_successful != 0) {
-		debug_printf("Unable to read file entry.\n");
+		debug_printf("in rmdir: unable to read file entry.\n");
 		return -1;
 	}
 
@@ -991,7 +987,7 @@ int fat_rmdir(char *path) {
 	int current_directory_empty;
 	current_directory_empty = is_empty_directory(current_directory_sector);
 	if (current_directory_empty != 0) {
-		debug_printf("Directory not empty\n");
+		debug_printf("in rmdir: directory not empty\n");
 		return -1;
 	}
 
@@ -1031,23 +1027,19 @@ int first_empty_location(int *directory_sector) {
 			if (dlocation + 1 < start_of_data()) {
 				//there are more root directory sectors to search
 				dlocation++;
-			}
-			else {
+			} else {
 				//file doesn't exist
 				return -1;
 			}
-		}
-		else {
+		} else {
 			if ((dlocation + 1 - start_of_data()) % sectors_cluster() != 0) {
 				//more sectors to search in this cluster
 				dlocation++;
-			}
-			else if (next_cluster_for_sector(dlocation) <= max_cluster) {
+			} else if (next_cluster_for_sector(dlocation) <= max_cluster) {
 				//continues into another cluster
 				uint16_t next_c = next_cluster_for_sector(dlocation);
 				dlocation = data_cluster_to_sector(next_c);
-			}
-			else {
+			} else {
 				return -1;
 			}
 		}
@@ -1170,8 +1162,7 @@ int is_empty_directory(int directory_sector) {
 				(dir_files[i].name[0] == '.' && dir_files[i].name[1] == '.') ||
 				(dir_files[i].name[0] == '.' && dir_files[i].name[1] == ' ')) {
 				continue;
-			}
-			else {
+			} else {
 				return -1;
 			}
 
@@ -1182,24 +1173,20 @@ int is_empty_directory(int directory_sector) {
 			if (directory_sector + 1 < start_of_data()) {
 				//there are more root directory sectors to search
 				directory_sector++;
-			}
-			else {
+			} else {
 				return 0;
 			}
-		}
-		else {
+		} else {
 			//empty so far, continue searching the next sector
 			//if there is actually a next sector
 			if ((directory_sector + 1 - start_of_data()) % sectors_cluster() != 0) {
 				// more sectors to search in this cluster
 				directory_sector++;
-			}
-			else if (next_cluster_for_sector(directory_sector) < max_cluster) {
+			} else if (next_cluster_for_sector(directory_sector) < max_cluster) {
 				// continues into another cluster
 				uint16_t next_c = next_cluster_for_sector(directory_sector);
 				directory_sector = data_cluster_to_sector(next_c);
-			}
-			else {
+			} else {
 				return 0;
 			}
 		}
