@@ -80,8 +80,55 @@ int main(int argc, char **argv)
 	// fat_close(file2);
 
 	/* rm root directory */
+	// fat_rmdir("SUBSUB.DIR/..");
+	// fat_unlink("kilobyte.bin");
+
+	/* test case 2 */
+	fat_mkdir("TESTDIR");
+	fat_mkdir("TESTDIR/SUB1");
+	fat_mkdir("TESTDIR/SUB1/BIGLONGNAME"); // test what happens when you give long names
+	fat_mkdir("TESTDIR/SUB1/BIG.LONGEXTENSION"); // test what happens when you give long extensions
+	fat_mkdir("TESTDIR/SUB1/SUB2");
+
+	// test rmdir
+	fat_rmdir("DIRTORM"); // should print out an error
+	fat_rmdir("DIRTORM/RMBLOCK");
+	fat_rmdir("DIRTORM"); // should remove fine now
+	fat_rmdir(""); // shouldn't be able to remove root directory
 	fat_rmdir(".");
-	// fat_rmdir("");
+
+	// make some files
+	int file;
+	unsigned char text[] = "Some short text to write\n";
+	file = fat_open("TESTDIR/TESTDIR.TXT", 'r'); // should be error
+	file = fat_open("TESTDIR/TESTDIR.TXT", 'a'); // should make a file
+	fat_write(file, &text, sizeof(text));
+	fat_write(file, &text, sizeof(text)); // should write it twice, appended
+	fat_close(file);
+
+	// test appending after a single character
+	file = fat_open("1CHARAP.TXT", 'w');
+	unsigned char text2[] = "a";
+	fat_write(file, &text2, sizeof(text2));
+	fat_close(file);
+	file = fat_open("1CHARAP.TXT", 'a');
+	unsigned char text3[] = "bcdefghijklmnopqrstuvwxyz";
+	fat_write(file, text3, sizeof(text3));
+	fat_close(file);
+
+	// test fat_unlink
+	file = fat_open("UNLINK.TXT", 'w');
+	unsigned char text4[] = "Text in the unlink.txt file\n";
+	fat_write(file, &text4, sizeof(text4));
+	fat_close(file);
+	fat_unlink("UNLINK.TXT");
+
+	// test unlink when file is open
+	file = fat_open("ULOPEN.TXT", 'w');
+	unsigned char text5[] = "Text in the ulopen.txt file\n";
+	fat_write(file, &text5, sizeof(text5));
+	fat_unlink("ULOPEN.TXT");
+	fat_close(file);
 
 	/* make own image */
 	// fat_mkfs("big.img", 1 << 25); // 4 sectors per cluster
