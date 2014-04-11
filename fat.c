@@ -774,9 +774,14 @@ int fat_write(int fd, void *buf, unsigned int count)
 			return -1;
 		}
 
+		bytes_to_write -= bytes_remaining;
+		bytes_written += bytes_remaining;
+		remaining_in_cluster -= bytes_remaining;
+		file_handles[fd].fp += (unsigned int)bytes_remaining;
+
 		//check if there is anymore bytes to write, if none, then ta-da,
 		//everything was successful
-		if (bytes_to_write == 0) {
+		if (bytes_to_write <= 0) {
 			return bytes_written;
 		}
 
@@ -785,8 +790,7 @@ int fat_write(int fd, void *buf, unsigned int count)
 		next_c = next_cluster(current_cluster);
 		//checks if it is last cluster, if it is, then allocate a new cluster
 		if (next_c == last_cluster) {
-			int new_data_cluster,
-				write_fat_successful;
+			int new_data_cluster;
 			new_data_cluster = first_free_fat_entry();
 			if (new_data_cluster < 0) {
 				debug_printf("unable to allocate new cluster. Disk is full\n");
@@ -796,7 +800,7 @@ int fat_write(int fd, void *buf, unsigned int count)
 			// make current cluster point to newly allocated cluster
 			write_fat_entry(current_cluster, (uint16_t) new_data_cluster);
 			// make newly allocated cluster have value of EOF
-			write_fat_successful = write_fat_entry((uint16_t) new_data_cluster, last_cluster);
+			write_fat_entry((uint16_t) new_data_cluster, last_cluster);
 			//assigns current cluster to the new cluster
 			current_cluster = (uint16_t) new_data_cluster;
 			offset_in_cluster = 0;
@@ -809,12 +813,6 @@ int fat_write(int fd, void *buf, unsigned int count)
 				exit_error("invalid cluster reference in FAT");
 			}
 		}
-
-		//housekeeping: sync counters
-		bytes_written += bytes_remaining;
-		bytes_to_write -= bytes_remaining;
-		remaining_in_cluster -= bytes_remaining;
-		file_handles[fd].fp += (unsigned int)bytes_remaining;
 	}
 
 	//have a return here to be safe. That been said, should never
@@ -884,7 +882,7 @@ int fat_unlink(char *path)
 	//open the file entry from disk, checks if it is a directory, if not
 	//then mark size to 0, name to deleted, and start cluster to 0
 	fat_file_t f_entry;
-	read_file_entry(&f_entry, directory_sector, file_entry_number);\
+	read_file_entry(&f_entry, directory_sector, file_entry_number);
 	if (f_entry.attr.dir == 1) {
 		debug_printf("unable to unlink directory. Please use fat_rmdir\n");
 		return -1;
@@ -898,7 +896,7 @@ int fat_unlink(char *path)
 	int write_entry_success;
 	f_entry.name[0] = deleted_file;
 	write_entry_success = write_file_entry(f_entry, directory_sector, file_entry_number);
-	return -1;
+	return write_entry_success;
 }
 
 int fat_mkdir(char *path)

@@ -39,15 +39,45 @@ int main(int argc, char **argv)
  // 	fat_close(file);
 
 	/* fat_write test */
+	// fat_mkdir("TESTDIR");
+	// int file2 = fat_open("TESTDIR/TEST.TXT", 'w');
+	// unsigned char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam malesuada varius arcu vel elementum. Vivamus sed commodo enim. Sed ultrices elementum eleifend. Quisque tempor lorem sed nisl pellentesque, et ultricies justo malesuada. Aliquam erat volutpat. Nullam ac tortor in justo rutrum scelerisque sit amet vel massa. Suspendisse potenti. Vestibulum nec pretium mi. Nam suscipit semper dolor non imperdiet. Nulla et orci nulla. Sed ac nibh sed lacus semper condimentum. Ut dignissim erat turpis, ut elementum lacus pulvinar ut. Donec porta eleifend luctus. Sed luctus ipsum eget enim congue, vel sollicitudin dui adipiscing. Phasellus sagittis elit eget magna venenatis porta. Cras pharetra eros ligula, at aliquam dui laoreet in. Vestibulum eu feugiat magna, et mollis tellus. ENDOFTEXT";
+	// fat_write(file2, &text, sizeof(text));
+	// fat_close(file2);
+	// file2 = fat_open("TESTDIR/TEST.TXT", 'a');
+	// unsigned char text2[] = "This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. ENDOFTEXT";
+	// fat_write(file2, &text2, sizeof(text2));
+	// fat_close(file2);
+
+	/* fat_remove */
+	// fat_rmdir("TESTDIR");
+	// fat_unlink("TESTDIR/TEST.TXT");
+	// fat_rmdir("TESTDIR");
+
+	/* fat_write test */
 	fat_mkdir("TESTDIR");
+	unsigned char buf[1024];
 	int file2 = fat_open("TESTDIR/TEST.TXT", 'w');
 	unsigned char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam malesuada varius arcu vel elementum. Vivamus sed commodo enim. Sed ultrices elementum eleifend. Quisque tempor lorem sed nisl pellentesque, et ultricies justo malesuada. Aliquam erat volutpat. Nullam ac tortor in justo rutrum scelerisque sit amet vel massa. Suspendisse potenti. Vestibulum nec pretium mi. Nam suscipit semper dolor non imperdiet. Nulla et orci nulla. Sed ac nibh sed lacus semper condimentum. Ut dignissim erat turpis, ut elementum lacus pulvinar ut. Donec porta eleifend luctus. Sed luctus ipsum eget enim congue, vel sollicitudin dui adipiscing. Phasellus sagittis elit eget magna venenatis porta. Cras pharetra eros ligula, at aliquam dui laoreet in. Vestibulum eu feugiat magna, et mollis tellus. ENDOFTEXT";
 	fat_write(file2, &text, sizeof(text));
 	fat_close(file2);
-	file2 = fat_open("TESTDIR/TEST.TXT", 'a');
+	file2 = fat_open("TESTDIR/TEST.TXT", 'r');
+	int rval = fat_read(file2, &buf, 1024);
+	printf("read %d bytes\n", rval);
+	printf("%s", buf);
+	fat_close(file2);
+
+	file2 = fat_open("TESTDIR/TEST.TXT", 'w');
 	unsigned char text2[] = "This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. ENDOFTEXT";
 	fat_write(file2, &text2, sizeof(text2));
 	fat_close(file2);
-	// fat_umount();
+	unsigned char buf2[1024];
+	file2 = fat_open("TESTDIR/TEST.TXT", 'r');
+	rval = fat_read(file2, &buf2, 1024);
+	printf("read %d bytes\n", rval);
+	printf("%s", buf2);
+	fat_close(file2);
+
+	fat_umount();
 	// return EXIT_SUCCESS;
 }
