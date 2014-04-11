@@ -338,7 +338,6 @@ int fat_open(char *name, char mode) {
 
 		//resets the file size to 0
 		f_entry.size = (uint16_t) 0;
-		f_entry.first_cluster = 0;
 		write_file_entry(f_entry, directory_sector, file_entry_number);
 
 	}

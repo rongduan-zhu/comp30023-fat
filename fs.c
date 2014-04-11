@@ -66,18 +66,18 @@ int main(int argc, char **argv)
 	printf("read %d bytes\n", rval);
 	printf("%s", buf);
 	fat_close(file2);
-	fat_unlink("TESTDIR/TEST.TXT");
+	// fat_unlink("TESTDIR/TEST.TXT");
 
-	// file2 = fat_open("TESTDIR/TEST.TXT", 'w');
-	// unsigned char text2[] = "This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. ENDOFTEXT";
-	// fat_write(file2, &text2, sizeof(text2));
-	// fat_close(file2);
-	// unsigned char buf2[1024];
-	// file2 = fat_open("TESTDIR/TEST.TXT", 'r');
-	// rval = fat_read(file2, &buf2, 1024);
-	// printf("read %d bytes\n", rval);
-	// printf("%s", buf2);
-	// fat_close(file2);
+	file2 = fat_open("TESTDIR/TEST.TXT", 'w');
+	unsigned char text2[] = "This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. This is some additional text that is to be appended. ENDOFTEXT";
+	fat_write(file2, &text2, sizeof(text2));
+	fat_close(file2);
+	unsigned char buf2[1024];
+	file2 = fat_open("TESTDIR/TEST.TXT", 'r');
+	rval = fat_read(file2, &buf2, 1024);
+	printf("read %d bytes\n", rval);
+	printf("%s", buf2);
+	fat_close(file2);
 
 	fat_umount();
 	// return EXIT_SUCCESS;
