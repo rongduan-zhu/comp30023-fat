@@ -263,6 +263,9 @@ int fat_open(char *name, char mode) {
 	namecopy2[MAX_PATH_LEN] = '\0';
 	char* dname = dirname(namecopy1);
 	char* bname = basename(namecopy2);
+	//convert to upper case
+	to_upper(bname, strlen(bname));
+	to_upper(dname, strlen(dname));
 	debug_printf("in open: directory name: %s\n", dname);
 	debug_printf("in open: file name: %s\n", bname);
 	int directory_sector = dir_lookup(dname);
@@ -284,8 +287,6 @@ int fat_open(char *name, char mode) {
 		unsigned char fext[FAT_EXT_LEN + 1];
 		fname[FAT_FILE_LEN] = '\0';
 		fext[FAT_EXT_LEN] = '\0';
-		to_upper((unsigned char *) bname, strlen(bname));
-		to_upper((unsigned char *) dname, strlen(dname));
 		name_to_83(bname, fname, fext);
 
 		//creates a new fat file
@@ -755,6 +756,9 @@ int fat_unlink(char *path) {
 	namecopy2[MAX_PATH_LEN] = '\0';
 	char* dname = dirname(namecopy1);
 	char* bname = basename(namecopy2);
+	//convert to upper case
+	to_upper(bname, strlen(bname));
+	to_upper(dname, strlen(dname));
 	debug_printf("in unlink: parent directory name: %s\n", dname);
 	debug_printf("in unlink: file name: %s\n", bname);
 	int directory_sector = dir_lookup(dname);
@@ -915,8 +919,6 @@ int fat_mkdir(char *path) {
 				  fext[FAT_EXT_LEN + 1];
 	fname[FAT_FILE_LEN] = '\0';
 	fext[FAT_EXT_LEN] = '\0';
-	to_upper((unsigned char *) bname, strlen(bname));
-	to_upper((unsigned char *) dname, strlen(dname));
 	name_to_83(bname, fname, fext);
 	debug_printf("in mkdir: writing file descriptors for new file in parent directory\n");
 	//sets up new file entry and write it to parent directory
@@ -964,7 +966,9 @@ int fat_rmdir(char *path) {
 	namecopy2[MAX_PATH_LEN] = '\0';
 	char* dname = dirname(namecopy1);
 	char* bname = basename(namecopy2);
-
+	//convert to upper case
+	to_upper(bname, strlen(bname));
+	to_upper(dname, strlen(dname));
 	//get parent and current directories sector number
 	int current_directory_sector;
 	int parent_directory_sector;
@@ -1061,8 +1065,8 @@ int first_empty_location(int *directory_sector) {
 }
 
 uint16_t unlink_entry(uint16_t current) {
-	int next = next_cluster(current);
 	int fat_write_success;
+	int next = next_cluster(current);
 	fat_write_success = write_fat_entry((uint16_t) current, free_cluster);
 	assert(fat_write_success == 0);
 	return next;
@@ -1070,7 +1074,7 @@ uint16_t unlink_entry(uint16_t current) {
 
 int unlink_chain(uint16_t start) {
 	uint16_t next = start;
-	for (int i = 0; i < chain_length(start); ++i) {
+	for (int i = chain_length(start); i > 0; --i) {
 		next = unlink_entry(next);
 	}
 	return 0;
@@ -1148,9 +1152,11 @@ fat_file_t make_file_descriptor(unsigned char *name,
 	return new_file;
 }
 
-void to_upper(unsigned char *str, int size) {
+void to_upper(char *str, int size) {
 	for (int i = 0; i < size; ++i) {
-		str[i] = toupper((int) str[i]);
+		if (isalpha(str[i])) {
+			str[i] = toupper((int) str[i]);
+		}
 	}
 }
 
