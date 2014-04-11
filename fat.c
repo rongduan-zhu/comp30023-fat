@@ -956,7 +956,10 @@ int fat_rmdir(char *path) {
 		debug_printf("in rmdir: disk not mounted\n");
 		return -1;
 	}
-
+	//making a copy of path to convert to upper case
+	char copy_of_path[MAX_PATH_LEN + 1];
+	strncpy(copy_of_path, path, MAX_PATH_LEN);
+	to_upper(copy_of_path, strlen(copy_of_path));
 	char namecopy1[MAX_PATH_LEN + 1];
 	strncpy(namecopy1, path, MAX_PATH_LEN);
 	namecopy1[MAX_PATH_LEN] = '\0';
@@ -971,11 +974,10 @@ int fat_rmdir(char *path) {
 	//get parent and current directories sector number
 	int current_directory_sector;
 	int parent_directory_sector;
-	current_directory_sector = dir_lookup(path);
+	current_directory_sector = dir_lookup(copy_of_path);
 	parent_directory_sector = dir_lookup(dname);
-
 	//make sure it isn't trying to remove root file
-	if (strcmp(bname, ".") == 0) {
+	if (current_directory_sector < start_of_data()) {
 		debug_printf("in rmdir: cannot remove root directory\n");
 		return -1;
 	}
